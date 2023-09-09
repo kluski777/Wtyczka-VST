@@ -3,13 +3,14 @@
 
 #include <iostream>
 #include <complex>
+#include <fftw3.h>
 
 using Complex = std::complex<double>;
 
 class Signal{
 	public:
 	short *signal, bits; // sygnał zazwyczaj zapisany w shorcie | bits potrzebny do odtwarzania.
-	Complex* fourier; // po analizie fouriera
+	fftw_complex* fourier; // po analizie fouriera
 	int encoding, channels, numElements; // numElements - liczba elementów w tablicy. numElements*sizeof(short) daje liczbe bajtów obv
 	long rate;
 	size_t bufsize;    // bufsize = ilość bajtów jednego w jednym buforze.

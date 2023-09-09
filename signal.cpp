@@ -33,7 +33,7 @@ Signal::Signal(const char* path){
     		signal[i*elemPerSmp + j] = temp[j];
     }
     std::cout << "Wczytałem próbki dźwięku w formacie PCM." << std::endl;
-	fourier = new Complex[numElements];
+	fourier = (fftw_complex*)fftw_malloc(numElements*sizeof(fftw_complex));
 
     free(buffer);
     mpg123_close(handler);
@@ -43,15 +43,14 @@ Signal::Signal(const char* path){
 
 void Signal::showSignal(){
 	std::cout << "liczba elementów zmiennej signal = " << numElements << ". Ale wyświetlam tylko 2000 żeby nie zajebać ekrau." << std::endl;
-	for(int i=1000000; i<1002000; i++)
+	for(int i=1000000; i<1000200; i++)
 		std::cout << "Element: " << i+1 <<  ". " << signal[i] << std::endl;
 }
 
 void Signal::showFourier(){
 	std::cout << "liczba elementów zmiennej fourier = " << numElements << ". Ale wyświetlam tylko 2000 żeby nie zajebać ekranu." << std::endl;
 	for(int i=0; i<numElements; i++){
-		if( i < 2000)
-			std::cout << "m = " << i+1 <<  ". " << fourier[i].real() << " + j" << fourier[i].imag() << std::endl;
+			std::cout << "m = " << i+1 <<  ". " << fourier[i][0] << " + j" << fourier[i][1] << std::endl;
 	}
 }
 

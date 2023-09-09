@@ -12,13 +12,11 @@ int main(){
 
 	erika.showSignal();
 
-	std::cout << "Po analizie Fouriera. Fourier:" << std::endl;
+	std::cout << "Po analizie Fouriera:" << std::endl;
 	
 	erika.DFT();
 
-	erika.showFourier();	
-
-	std::cout << "Po IDFT. Znowu signal:" << std::endl;
+	std::cout << "Po IDFT. Znowu signal uzyskany z DFT i IDFT:" << std::endl;
 
 	erika.iDFT();
 
