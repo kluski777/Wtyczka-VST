@@ -1,6 +1,6 @@
 CXX=g++
 
-CXXFLAGS=-std=c++11 -Wall
+CXXFLAGS=-std=c++11 -Wall -g
 
 LIBRARIES=-lao -lmpg123
 FFTWLIBRARY=-lfftw3
@@ -23,7 +23,7 @@ fourier.o: fft.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) fft.cpp -c -o fourier.o
 
 run: $(TARGET)			# Dopisać run po make albo make potem ./projekt
-	./$(TARGET)
+	valgrind --leak-check=full ./$(TARGET)
 
 clean:
 	rm -f $(TARGET) *.o

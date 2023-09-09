@@ -43,15 +43,14 @@ Signal::Signal(const char* path){
 
 void Signal::showSignal(){
 	std::cout << "liczba elementów zmiennej signal = " << numElements << ". Ale wyświetlam tylko 2000 żeby nie zajebać ekrau." << std::endl;
-	for(int i=1000000; i<1002000; i++){
-			std::cout << "Element: " << i+1 <<  ". " << signal[i] << std::endl;
-	}
+	for(int i=1000000; i<1002000; i++)
+		std::cout << "Element: " << i+1 <<  ". " << signal[i] << std::endl;
 }
 
 void Signal::showFourier(){
 	std::cout << "liczba elementów zmiennej fourier = " << numElements << ". Ale wyświetlam tylko 2000 żeby nie zajebać ekranu." << std::endl;
 	for(int i=0; i<numElements; i++){
-		if( i < 2000 )
+		if( i < 2000)
 			std::cout << "m = " << i+1 <<  ". " << fourier[i].real() << " + j" << fourier[i].imag() << std::endl;
 	}
 }

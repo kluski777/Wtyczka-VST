@@ -4,7 +4,7 @@
 #include <iostream>
 #include <complex>
 
-using Complex = std::complex<float>;
+using Complex = std::complex<double>;
 
 class Signal{
 	public:
