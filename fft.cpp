@@ -40,9 +40,8 @@ void Signal::iDFT(){
 
 	fftw_destroy_plan(ifftPlan);
 
-	for(int i=0; i<numElements; i++){
+	for(int i=0; i<numElements; i++)
 		signal[i] = short(std::round(temp[i]/numElements));
-	}
 
     delete [] temp;
 }

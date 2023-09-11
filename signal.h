@@ -8,20 +8,23 @@
 using Complex = std::complex<double>;
 
 class Signal{
-	public:
-	short *signal, bits; // sygnał zazwyczaj zapisany w shorcie | bits potrzebny do odtwarzania.
-	fftw_complex* fourier; // po analizie fouriera
+	std::string title;
+	short *signal, bits; // signal - sygnał zapisany w formacie PCM.
+	fftw_complex* fourier; // fourier - Liczby zespolone po transformacie fouriera, fftw_complex traktować jak double* o 2 elementach tj. fourier[n][0] -> liczba rzeczywista n-tego elementu tablicy, fourier[n][1] -> liczba urojona
 	int encoding, channels, numElements; // numElements - liczba elementów w tablicy. numElements*sizeof(short) daje liczbe bajtów obv
 	long rate;
 	size_t bufsize;    // bufsize = ilość bajtów jednego w jednym buforze.
 
-	Signal(const char*); // konstruktor wczytuje sygnał
-    ~Signal();
-    void showSignal();
-	void playSound();   // zagranie sygnału (wygląda na to że działa)
-	void DFT();
-	void iDFT();
-	void showFourier();
+
+	public:
+		Signal(const char*); // konstruktor, który wczytuje sygnał, argument to ścieżka do .mp3
+		~Signal();
+    	void saveSignal(int[]);
+		void saveFourier(int[]);
+		void playSound();
+		void DFT();
+		void iDFT();
+		int size(){ return numElements;}
 };
 
 #endif

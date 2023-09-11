@@ -1,57 +1,101 @@
 #include <mpg123.h>
 #include <ao/ao.h>
+#include <cstring>
+#include <fstream>
 #include "signal.h"
 
-/////////////////////////////////////////// WCZYTANIE SYGNAŁU Z MP3
+
+/////////////////////////////////////////// WCZYTANIE SYGNAŁU Z .mp3 LUB .WAV
 Signal::Signal(const char* path){
-    mpg123_init();  // otwarcie biblioteki
+	short len = strlen(path);
+	std::string fileType = "";
+	int i=0;
+	title = "";	
+
+	std::cout << "Path " << path << '.' << std::endl;
 	
-    // inicjalizacje zmiennych mpg
-    mpg123_handle *handler = mpg123_new(NULL, NULL);
-    size_t done;
-    bufsize = mpg123_outblock(handler);
-    char* buffer = (char*) malloc(bufsize);
+	
+	for(i=3; i>0; i--)
+		fileType += path[len-i];
 
-    mpg123_open(handler, path); // otwarcie pliku przypisanie wartości do handlera
-    mpg123_getformat(handler, &rate, &channels, &encoding); // do odtwarzania
+	i = len;
+	while(path[--i] != '/');
 
-    bits = mpg123_encsize(encoding) * 8; // musi być 8 dla 16 bitów nie działa
-    size_t totSize = 0; // w bajtach
+	for(i=i+1; path[i] != '.' ;i++)	
+		title += path[i];
 
-    while(mpg123_read(handler, buffer, bufsize, &done) == MPG123_OK){
-    	totSize += done; // długość sygnału w bajtach.
-	}
 
-	mpg123_seek(handler, 0, SEEK_SET); // ustawia handler na 0 elemencie od początku pliku .mp3
-	numElements = totSize/sizeof(short);
-    signal = new short[numElements];       // totSize to wielokrotność bufsize (tak wychodzi z eriki)
+	if( fileType == "mp3" ){	
+
+    	mpg123_init();  // otwarcie biblioteki
+	
+	    // inicjalizacje zmiennych mpg
+    	mpg123_handle *handler = mpg123_new(NULL, NULL);
+    	size_t done;
+    	bufsize = mpg123_outblock(handler);
+    	char* buffer = (char*) malloc(bufsize);
+
+    	mpg123_open(handler, path); // otwarcie pliku przypisanie wartości do handlera
+    	mpg123_getformat(handler, &rate, &channels, &encoding); // do odtwarzania
+
+   		bits = mpg123_encsize(encoding) * 8; // musi być 8 dla 16 bitów nie działa
+    	size_t totSize = 0; // w bajtach
+
+    	while(mpg123_read(handler, buffer, bufsize, &done) == MPG123_OK){
+    		totSize += done; // długość sygnału w bajtach.
+		}
+
+		mpg123_seek(handler, 0, SEEK_SET); // ustawia handler na 0 elemencie od początku pliku .mp3
+		numElements = totSize/sizeof(short);
+    	signal = new short[numElements];       // totSize to wielokrotność bufsize (tak wychodzi z eriki)
     
-	int elemPerSmp = bufsize/sizeof(short);
-    for(int i=0;mpg123_read(handler, buffer, bufsize, &done) == MPG123_OK; i++){
-        short* temp = reinterpret_cast<short*> (buffer);        // nie wiem jak to bez tej linijki zrobić, możnaby to poprawić
-        for(int j=0; j<elemPerSmp; j++)
-    		signal[i*elemPerSmp + j] = temp[j];
-    }
-    std::cout << "Wczytałem próbki dźwięku w formacie PCM." << std::endl;
-	fourier = (fftw_complex*)fftw_malloc(numElements*sizeof(fftw_complex));
+		int elemPerSmp = bufsize/sizeof(short);
+    	for(int i=0;mpg123_read(handler, buffer, bufsize, &done) == MPG123_OK; i++){
+        	short* temp = reinterpret_cast<short*> (buffer);        // nie wiem jak to bez tej linijki zrobić, możnaby to poprawić
+        	for(int j=0; j<elemPerSmp; j++)
+    			signal[i*elemPerSmp + j] = temp[j];
+    	}
+    	std::cout << "Wczytałem próbki dźwięku w formacie PCM." << std::endl;
+		fourier = (fftw_complex*)fftw_malloc(numElements*sizeof(fftw_complex));
 
-    free(buffer);
-    mpg123_close(handler);
-    mpg123_delete(handler);
-    mpg123_exit();
-}
-
-void Signal::showSignal(){
-	std::cout << "liczba elementów zmiennej signal = " << numElements << ". Ale wyświetlam tylko 2000 żeby nie zajebać ekrau." << std::endl;
-	for(int i=1000000; i<1000200; i++)
-		std::cout << "Element: " << i+1 <<  ". " << signal[i] << std::endl;
-}
-
-void Signal::showFourier(){
-	std::cout << "liczba elementów zmiennej fourier = " << numElements << ". Ale wyświetlam tylko 2000 żeby nie zajebać ekranu." << std::endl;
-	for(int i=0; i<numElements; i++){
-			std::cout << "m = " << i+1 <<  ". " << fourier[i][0] << " + j" << fourier[i][1] << std::endl;
+    	free(buffer);
+    	mpg123_close(handler);
+    	mpg123_delete(handler);
+    	mpg123_exit();
 	}
+	else if( fileType == "wav"){
+		std::cout << "Powinienem wczytać wava." << std::endl;
+	}
+	else
+		std::cout << "Nie rozpoznaję typu pliku." << std::endl;
+	
+}
+
+void Signal::saveSignal(int elems[]){
+	std::string tempTitle = this->title + "Sygnał.txt";
+	std::ofstream doPliku(tempTitle, std::ios::binary);
+	if(!doPliku.is_open())
+		throw("Coś poszło nie tak przy otwieraniu pliku.");
+
+	for(int i=elems[0]; i<elems[1]; i++)
+		doPliku << signal[i] << ' ';
+
+	std::cout << "Elementy sygnału zapisano w pliku " << tempTitle << '.' << std::endl;
+	doPliku.close();
+}
+
+
+void Signal::saveFourier(int elems[]){
+	std::string tempTitle = this->title + "Fourier.txt";
+	std::ofstream doPliku(tempTitle);
+	if(!doPliku.is_open())
+		throw("Coś poszło nie tak przy otwieraniu pliku Fourier.");
+
+	for(int i=elems[0]; i<elems[1]; i++)
+		doPliku << fourier[i] << ' ';
+	
+	std::cout << "Elementy po transformacie fouriera zapisano w pliku " << tempTitle << '.' << std::endl;
+	doPliku.close();
 }
 
 
@@ -80,7 +124,10 @@ void Signal::playSound(){
         ao_shutdown();
 }
 
+
+
 Signal::~Signal(){
 	delete [] signal;
 	delete [] fourier;
 }
+
