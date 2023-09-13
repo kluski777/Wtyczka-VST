@@ -1,12 +1,12 @@
 CXX=g++
 
-CXXFLAGS=-std=c++11 -Wall -g
+CXXFLAGS=-std=c++11 -Wall -g ## do valgrind'a
 
 LIBRARIES=-lao -lmpg123
 FFTWLIBRARY=-lfftw3
 FFTW_LOCATION=/usr/include
 
-SOURCES=projekt.cpp signal.o fourier.o
+SOURCES=projekt.cpp signal.o fft.o modyfikacje.o
 HEADERS=signal.h
 
 TARGET=projekt
@@ -19,11 +19,11 @@ $(TARGET): $(SOURCES) $(HEADERS)
 signal.o: signal.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c -o signal.o signal.cpp
 
-fourier.o: fft.cpp $(HEADERS)
-	$(CXX) $(CXXFLAGS) fft.cpp -c -o fourier.o
+fft.o: fft.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) fft.cpp -c -o fft.o
 
-run: $(TARGET)			# Dopisać run po make albo make potem ./projekt
-	valgrind --leak-check=full ./$(TARGET)
+modyfikacja.o: modyfikacje.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -c -o modyfikacje.o modyfikacje.cpp
 
 clean:
-	rm -f $(TARGET) *.o
+	rm -f *.o

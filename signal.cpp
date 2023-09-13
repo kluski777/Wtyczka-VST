@@ -4,6 +4,25 @@
 #include <fstream>
 #include "signal.h"
 
+#pragma pack(push, 1) /* Pragma potrzebna żeby kompilator nie powrzucał padding byte'ów do struktury niżej,
+bo wtedy po "reinterpretacji" wskaźnika przy czytaniu WAV, zmienne wczytają się w inne miejsca,
+nie tam gdzie trzeba. W tym wypadku #pragma zmienia ustawienie */
+struct wavHeader{ // konieczne do przeczytania headerów pliku WAV
+    char chunkID[4];
+    uint32_t chunkSize;
+    char format[4];
+    char subchunk1ID[4];
+    uint32_t subchunk1Size;
+    uint16_t audioFormat;
+    uint16_t numChannels;
+    uint32_t sampleRate;
+    uint32_t frequency;
+    uint16_t blockAlign;
+    uint16_t bits;
+    char subchunk2ID[4];
+    uint32_t subchunk2Size;
+};
+#pragma pack(pop) // koniec działania pragmy
 
 /////////////////////////////////////////// WCZYTANIE SYGNAŁU Z .mp3 LUB .WAV
 Signal::Signal(const char* path){
@@ -12,9 +31,6 @@ Signal::Signal(const char* path){
 	int i=0;
 	title = "";	
 
-	std::cout << "Path " << path << '.' << std::endl;
-	
-	
 	for(i=3; i>0; i--)
 		fileType += path[len-i];
 
@@ -23,7 +39,6 @@ Signal::Signal(const char* path){
 
 	for(i=i+1; path[i] != '.' ;i++)	
 		title += path[i];
-
 
 	if( fileType == "mp3" ){	
 
@@ -36,7 +51,7 @@ Signal::Signal(const char* path){
     	char* buffer = (char*) malloc(bufsize);
 
     	mpg123_open(handler, path); // otwarcie pliku przypisanie wartości do handlera
-    	mpg123_getformat(handler, &rate, &channels, &encoding); // do odtwarzania
+    	mpg123_getformat(handler, &frequency, &channels, &encoding); // do odtwarzania
 
    		bits = mpg123_encsize(encoding) * 8; // musi być 8 dla 16 bitów nie działa
     	size_t totSize = 0; // w bajtach
@@ -63,13 +78,37 @@ Signal::Signal(const char* path){
     	mpg123_delete(handler);
     	mpg123_exit();
 	}
-	else if( fileType == "wav"){
-		std::cout << "Powinienem wczytać wava." << std::endl;
-	}
+	else if( fileType == "wav" || fileType == "WAV"){ // obydwa się spotyka
+		std::fstream plikWav(path);
+		wavHeader header;
+		plikWav.read(reinterpret_cast<char*>(&header), sizeof(header));
+		
+		if(!plikWav.is_open())
+			throw("\t\"Great Success\" ~ Borat 2006 - cytaty wielkich ludzi (bo Borat miał 191 cm wzrostu).");
+
+		std::string fileFormatArgument(header.format, 4);
+		if(fileFormatArgument == "WAVE" || fileFormatArgument == "wave" || fileFormatArgument == "Wave"){
+			this->frequency = header.frequency/4;
+			this->bits = header.bits;
+			this->numElements = (header.chunkSize-36)/sizeof(short); // z definicji chunkSize'a - liczba bajtów, od chunkSize'a
+			this->channels = header.numChannels; // stereo / mono
+			this->bufsize = 8192; // Zmienną z .mp3 ciężko porównać z jakąkolwiek z headera WAV-a, ale lepiej jest jak jest duża. 
+			this->encoding = header.bits; // encoding liczba bitów na próbkę i informacja czy zmienna typu signed  lub unsigned
+			
+			signal = new short[numElements];
+			fourier = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*numElements);
+			plikWav.seekg(44, std::ios::cur); // przesuwa iterator na 44 pozycję, już po headerze.		
+
+			for(int i=0; i<numElements; i++)
+				plikWav.read(reinterpret_cast<char*>(&signal[i]), sizeof(short));
+
+			plikWav.close();
+		}
+	}	
 	else
-		std::cout << "Nie rozpoznaję typu pliku." << std::endl;
-	
+		throw("Nie rozpoznaję typu pliku. Spróbuj jeszcze raz.");	
 }
+
 
 void Signal::saveSignal(int elems[]){
 	std::string tempTitle = this->title + "Sygnał.txt";
@@ -78,7 +117,7 @@ void Signal::saveSignal(int elems[]){
 		throw("Coś poszło nie tak przy otwieraniu pliku.");
 
 	for(int i=elems[0]; i<elems[1]; i++)
-		doPliku << signal[i] << ' ';
+		doPliku << signal[i] << '\n';
 
 	std::cout << "Elementy sygnału zapisano w pliku " << tempTitle << '.' << std::endl;
 	doPliku.close();
@@ -91,8 +130,12 @@ void Signal::saveFourier(int elems[]){
 	if(!doPliku.is_open())
 		throw("Coś poszło nie tak przy otwieraniu pliku Fourier.");
 
-	for(int i=elems[0]; i<elems[1]; i++)
-		doPliku << fourier[i] << ' ';
+	for(int i=elems[0]; i<elems[1]; i++){
+		if(fourier[i][1] > 0)
+			doPliku << fourier[i][0] << " + " << fourier[i][1] << "j\n";
+		else
+			doPliku << fourier[i][0] << ' ' << fourier[i][1] << "j\n";
+	}
 	
 	std::cout << "Elementy po transformacie fouriera zapisano w pliku " << tempTitle << '.' << std::endl;
 	doPliku.close();
@@ -106,7 +149,7 @@ void Signal::playSound(){
         ao_sample_format format;
 
         format.bits = bits;
-        format.rate = rate;
+        format.rate = frequency;
         format.channels = channels;
         format.byte_format = AO_FMT_NATIVE;
         format.matrix = 0;
@@ -114,7 +157,7 @@ void Signal::playSound(){
         ao_device* device = ao_open_live(driver, &format, NULL);
         std::cout << "Leci piosenka." << std::endl;
 
-        for(int j=0; j<int(numElements*sizeof(short)/bufsize); j++){								// jeszcze dodać stop, start
+        for(int j=0; j<int(numElements*sizeof(short)/bufsize); j++){	// jeszcze dodać stop, start
                 char* temp = (char*) malloc(bufsize);
                 temp = reinterpret_cast<char*> (&signal[j*bufsize/sizeof(short)]); 	// tylko dla char* działa ao_play
                 ao_play(device, temp, bufsize);
@@ -130,4 +173,3 @@ Signal::~Signal(){
 	delete [] signal;
 	delete [] fourier;
 }
-
