@@ -84,7 +84,7 @@ Signal::Signal(const char* path){
 		plikWav.read(reinterpret_cast<char*>(&header), sizeof(header));
 		
 		if(!plikWav.is_open())
-			throw("\t\"Great Success\" ~ Borat 2006 - cytaty wielkich ludzi (bo Borat miał 191 cm wzrostu).");
+			throw("Opening .WAV file failed.");
 
 		std::string fileFormatArgument(header.format, 4);
 		if(fileFormatArgument == "WAVE" || fileFormatArgument == "wave" || fileFormatArgument == "Wave"){
@@ -106,7 +106,7 @@ Signal::Signal(const char* path){
 		}
 	}	
 	else
-		throw("Nie rozpoznaję typu pliku. Spróbuj jeszcze raz.");	
+		throw("Nie rozpoznaję typu wpisanego pliku.");	
 }
 
 
@@ -132,9 +132,9 @@ void Signal::saveFourier(int elems[]){
 
 	for(int i=elems[0]; i<elems[1]; i++){
 		if(fourier[i][1] > 0)
-			doPliku << fourier[i][0] << " + " << fourier[i][1] << "j\n";
+			doPliku << fourier[i][0] << " +" << fourier[i][1] << "j\n";
 		else
-			doPliku << fourier[i][0] << ' ' << fourier[i][1] << "j\n";
+			doPliku << fourier[i][0] << " " << fourier[i][1] << "j\n";
 	}
 	
 	std::cout << "Elementy po transformacie fouriera zapisano w pliku " << tempTitle << '.' << std::endl;
@@ -155,10 +155,11 @@ void Signal::playSound(){
         format.matrix = 0;
 
         ao_device* device = ao_open_live(driver, &format, NULL);
-        std::cout << "Leci piosenka." << std::endl;
+        std::cout << "Piosenka:" << std::endl;
 
-        for(int j=0; j<int(numElements*sizeof(short)/bufsize); j++){	// jeszcze dodać stop, start
-                char* temp = (char*) malloc(bufsize);
+		char* temp = (char*)malloc(bufsize);
+        
+		for(int j=0; j<int(numElements*sizeof(short)/bufsize); j++){	// fajnie byłoby dodać multithreading, wtedy można by zatrzymywać i puszczać w dowolnym momencie.
                 temp = reinterpret_cast<char*> (&signal[j*bufsize/sizeof(short)]); 	// tylko dla char* działa ao_play
                 ao_play(device, temp, bufsize);
 		}
